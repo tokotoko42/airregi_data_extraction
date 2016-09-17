@@ -4,9 +4,6 @@
  *
  * @package
  * @subpackage
- * @author ts-tosfunaki<ts-toshiharu.funaki@mail.rakuten.com>
- * @version $Revision$
- * $Id$
  */
 class RFileLogRoute extends CFileLogRoute
 {
