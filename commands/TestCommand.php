@@ -53,6 +53,7 @@ class TestCommand extends BatchBase
 
     // CSRFトークンを取得
     $token = $this->getCsrfToken();
+    echo $token . "\n";
 
     // // CSRFトークンが見つからなければ、エラーログを出力し、終了する
     if ($token) {

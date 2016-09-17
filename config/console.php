@@ -13,7 +13,7 @@ return array(
         'crypt'=>array(
             'class'=>'CSecurityManager',
             'cryptAlgorithm'=>'rijndael-256',
-            'encryptionKey'=>'byyzyw0sXjc)nIueopcxq7crftylgkig',
+            'encryptionKey'=>'byywyw0sXDc)nIueopcPq7crftylgkig',
         ),
         'log'=>array(
             'class'=>'CLogRouter',

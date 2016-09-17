@@ -3,7 +3,7 @@
 @ob_end_clean();
 $yiic = dirname(__FILE__).'/yii/framework/yiic.php';
 
-switch (strtoupper($_SERVER['ENV'])) {
+switch (strtoupper($_SERVER['AIRREGI_ENV'])) {
 case 'PRO': // 本番環境
     $config = dirname(__FILE__) . '/config/_console_r_product.php';
     break;
