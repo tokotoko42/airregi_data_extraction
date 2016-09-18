@@ -9,6 +9,7 @@ class TestCommand extends BatchBase
   private $user_agent;
   private $login_url;
   private $logout_url;
+  private $transaction_url;
 
   /**
    * 設定ファイルのパラメータを取得する
@@ -17,6 +18,7 @@ class TestCommand extends BatchBase
     $this->cookie_path = Yii::app()->params['cookie_path'];
     $this->user_agent = Yii::app()->params['user_agent'];
     $this->login_url = Yii::app()->params['login_url'];
+    $this->transaction_url = Yii::app()->params['transaction_url'];
     $this->logout_url = Yii::app()->params['logout_url'];
     $this->log_id = "AIRREGI-INFO";
   }
@@ -34,7 +36,7 @@ class TestCommand extends BatchBase
   /**
    * AIRレジの認証用クッキーを削除する
    */
-  public function clearCookies() {
+  private function clearCookies() {
     if (!is_resource($this->ch)) {
       $msg = 'cURLリソースが初期化されていません';
       $this->setLog($this->log_id, 'error', __CLASS__, __FUNCTION__, __LINE__, $msg);
@@ -111,6 +113,53 @@ class TestCommand extends BatchBase
      $this->setLog($this->log_id, 'info', __CLASS__, __FUNCTION__, __LINE__, $msg);
      return $this->exec();
    }
+   
+  private function getParams() {
+      // 前日の日付を抽出する
+      $year = date("Y",strtotime("-1 day")); 
+      $month = date("m",strtotime("-1 day")); 
+      $day = date("d",strtotime("-1 day"));
+
+      // リクエストパラメータを設定する
+      $params = 'paramStr=%7B%22categoryId%22%3A%22%22%2C%22targetDateYearFrom%22%3A%22' . $year .
+                '%22%2C%22targetDateMonthFrom%22%3A%22' . $month .
+                '%22%2C%22targetDateDayFrom%22%3A%22' . $day .
+                '%22%2C%22targetDateYearTo%22%3A%22' . $year .
+                '%22%2C%22targetDateMonthTo%22%3A%22' . $month .
+                '%22%2C%22targetDateDayTo%22%3A%22' . $day .
+                '%22%2C%22sortType%22%3A%220%22%7D';
+      //$params = 'paramStr=%7B%22categoryId%22%3A%22%22%2C%22targetDateYearFrom%22%3A%222016%22%2C%22targetDateMonthFrom%22%3A%2209%22%2C%22targetDateDayFrom%22%3A%2208%22%2C%22targetDateYearTo%22%3A%222016%22%2C%22targetDateMonthTo%22%3A%2209%22%2C%22targetDateDayTo%22%3A%2213%22%2C%22sortType%22%3A%220%22%7D';
+      return $params;
+  }
+   
+  private function getTransaction() {
+      // Headerを定義
+      $http_header = array(
+         'Connection:keep-alive',
+         'corClpKeyCd:JF2TOOKSQRSSHS2F8A0D7ND6EO3PV3AI',
+      );
+      
+      // Parameterセット
+      $params = $this->getParams();
+      
+      // ログアウトリクエストを送信
+      $this->ch = curl_init();
+      curl_setopt_array($this->ch, array(
+           CURLOPT_URL => $this->transaction_url,
+           CURLOPT_COOKIEFILE => $this->cookie_path,
+           CURLOPT_COOKIEJAR => $this->cookie_path,
+           CURLOPT_USERAGENT => $this->user_agent,
+           CURLOPT_HTTPHEADER => $http_header,
+           CURLOPT_POST => true,
+           CURLOPT_POSTFIELDS => $params,
+           CURLOPT_RETURNTRANSFER => true,
+      ));
+ 
+      $response = $this->exec();
+      $msg = '取引データを取得しました。Response=' . $response;
+      $this->setLog($this->log_id, 'info', __CLASS__, __FUNCTION__, __LINE__, $msg);
+      return $response;
+  }
 
   /**
    * ログアウトリクエスト
@@ -166,6 +215,9 @@ class TestCommand extends BatchBase
       $msg = 'ログインリクエストに失敗しました';
       $this->setLog($this->log_id, 'error', __CLASS__, __FUNCTION__, __LINE__, $msg);
     }
+    
+    // 取引データを抽出
+    $this->getTransaction();
     
     // ログアウト処理
     $this->logout();
