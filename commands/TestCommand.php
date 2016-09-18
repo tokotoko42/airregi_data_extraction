@@ -128,11 +128,11 @@ class TestCommand extends BatchBase
                 '%22%2C%22targetDateMonthTo%22%3A%22' . $month .
                 '%22%2C%22targetDateDayTo%22%3A%22' . $day .
                 '%22%2C%22sortType%22%3A%220%22%7D';
-      //$params = 'paramStr=%7B%22categoryId%22%3A%22%22%2C%22targetDateYearFrom%22%3A%222016%22%2C%22targetDateMonthFrom%22%3A%2209%22%2C%22targetDateDayFrom%22%3A%2208%22%2C%22targetDateYearTo%22%3A%222016%22%2C%22targetDateMonthTo%22%3A%2209%22%2C%22targetDateDayTo%22%3A%2213%22%2C%22sortType%22%3A%220%22%7D';
+      $params = 'paramStr=%7B%22categoryId%22%3A%22%22%2C%22targetDateYearFrom%22%3A%222016%22%2C%22targetDateMonthFrom%22%3A%2209%22%2C%22targetDateDayFrom%22%3A%2208%22%2C%22targetDateYearTo%22%3A%222016%22%2C%22targetDateMonthTo%22%3A%2209%22%2C%22targetDateDayTo%22%3A%2213%22%2C%22sortType%22%3A%220%22%7D';
       return $params;
   }
    
-  private function getTransaction() {
+  private function dataRequest() {
       // Headerを定義
       $http_header = array(
          'Connection:keep-alive',
@@ -159,6 +159,23 @@ class TestCommand extends BatchBase
       $msg = '取引データを取得しました。Response=' . $response;
       $this->setLog($this->log_id, 'info', __CLASS__, __FUNCTION__, __LINE__, $msg);
       return $response;
+  }
+  
+  private function getTransactionData($json) {
+    $json = mb_convert_encoding($json, 'UTF8', 'ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN');
+    $json_array = json_decode($json,true);
+    
+    if ($json_array === NULL) {
+        $msg = 'リクエストのJSONコードを取得できませんでした。';
+        $this->setLog($this->log_id, 'error', __CLASS__, __FUNCTION__, __LINE__, $msg);
+    }
+    
+    if (empty($json_array["results"]["resultsData"])) {
+        $msg = '取引データが見つかりませんでした。 User = ' . $this->login_url;
+        $this->setLog($this->log_id, 'info', __CLASS__, __FUNCTION__, __LINE__, $msg);
+    } else {
+        var_dump($json_array["results"]["resultsData"]);
+    }
   }
 
   /**
@@ -217,7 +234,8 @@ class TestCommand extends BatchBase
     }
     
     // 取引データを抽出
-    $this->getTransaction();
+    $json = $this->dataRequest();
+    $this->getTransactionData($json);
     
     // ログアウト処理
     $this->logout();
