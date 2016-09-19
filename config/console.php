@@ -5,6 +5,7 @@ return array(
     'name'=>'Console Application',
     'preload'=>array('log'),
     'import'=>array(
+        'application.models.BaseModel',
         'application.models.*',
         'application.components.*',
     ),
@@ -13,7 +14,7 @@ return array(
         'crypt'=>array(
             'class'=>'CSecurityManager',
             'cryptAlgorithm'=>'rijndael-256',
-            'encryptionKey'=>'byywyw0sXDc)nIueopcPq7crftylgkig',
+            'encryptionKey'=>'ayywyp0sXDc)jIueopdPq7crftylgkig',
         ),
         'log'=>array(
             'class'=>'CLogRouter',

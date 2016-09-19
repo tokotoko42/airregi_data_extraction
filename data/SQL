@@ -11,23 +11,25 @@ CREATE TABLE `receipt_master` (
   `id` int(11) AUTO_INCREMENT DEFAULT NULL,
   `buydate` datetime DEFAULT NULL,
   `shohin_name` text DEFAULT NULL,
-  `shohin_category` int(11) DEFAULT NULL,
+  `shohin_category` text DEFAULT NULL,
   `tax` tinyint(1) DEFAULT NULL,
   `price` int(11) DEFAULT NULL,
   `receipt_hokko` tinyint(4) DEFAULT 0,
   `creates` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`ID`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT COLLATE latin1_swedish_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT character set utf8;
 
 CREATE TABLE `tempo_master` (
   `id` int(11) AUTO_INCREMENT DEFAULT NULL,
   `tempo_name` text DEFAULT NULL,
-  `zip` int(11) DEFAULT NULL,
+  `zip` text DEFAULT NULL,
   `address` text DEFAULT NULL,
-  `tel` int(11) DEFAULT NULL,
+  `tel` text DEFAULT NULL,
+  `user_id` text DEFAULT NULL,
+  `password` text DEFAULT NULL,
   `email` text DEFAULT NULL,
   `hp` text DEFAULT NULL,
   `creates` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`ID`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT COLLATE latin1_swedish_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT character set utf8;
 
