@@ -5,31 +5,33 @@ CREATE TABLE `receipt_db` (
   `price` int(11) DEFAULT NULL,
   `creates` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`ID`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARACTER SET 'utf8';
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `receipt_master` (
   `id` int(11) AUTO_INCREMENT DEFAULT NULL,
   `buydate` datetime DEFAULT NULL,
+  `shoten_id` int(11) DEFAULT NULL,
   `shohin_name` text DEFAULT NULL,
-  `shohin_category` text DEFAULT NULL,
+  `shohin_category` int(11) DEFAULT NULL,
+  `shohin_category_text` text DEFAULT NULL,
   `tax` tinyint(1) DEFAULT NULL,
+  `tax_rate` int(3) DEFAULT NULL,
   `price` int(11) DEFAULT NULL,
-  `receipt_hokko` tinyint(4) DEFAULT 0,
+  `receipt_hokko` tinyint(4) NOT NULL,
   `creates` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`ID`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT character set utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `tempo_master` (
-  `id` int(11) AUTO_INCREMENT DEFAULT NULL,
+  `id` int(11) AUTO_INCREMENT DEFAULT '0',
   `tempo_name` text DEFAULT NULL,
   `zip` text DEFAULT NULL,
   `address` text DEFAULT NULL,
   `tel` text DEFAULT NULL,
   `user_id` text DEFAULT NULL,
-  `password` text DEFAULT NULL,
   `email` text DEFAULT NULL,
   `hp` text DEFAULT NULL,
   `creates` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`ID`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT character set utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;
 
