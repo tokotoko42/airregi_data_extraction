@@ -11,11 +11,6 @@ return array(
     ),
     // application components
     'components'=>array(
-        'crypt'=>array(
-            'class'=>'CSecurityManager',
-            'cryptAlgorithm'=>'rijndael-256',
-            'encryptionKey'=>'ayywyp0sXDc)jIueopdPq7crftylgkig',
-        ),
         'log'=>array(
             'class'=>'CLogRouter',
             'routes'=>array(
