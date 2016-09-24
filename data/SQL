@@ -1,5 +1,5 @@
 CREATE TABLE `receipt_db` (
-  `id` int(11) AUTO_INCREMENT DEFAULT NULL,
+  `id` int(11) AUTO_INCREMENT DEFAULT '0',
   `buydate` datetime DEFAULT NULL,
   `shoten_id` int(11) DEFAULT NULL,
   `price` int(11) DEFAULT NULL,
@@ -8,7 +8,7 @@ CREATE TABLE `receipt_db` (
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `receipt_master` (
-  `id` int(11) AUTO_INCREMENT DEFAULT NULL,
+  `id` int(11) AUTO_INCREMENT DEFAULT '0',
   `buydate` datetime DEFAULT NULL,
   `shoten_id` int(11) DEFAULT NULL,
   `shohin_name` text DEFAULT NULL,
