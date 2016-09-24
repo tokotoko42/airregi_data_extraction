@@ -18,12 +18,12 @@ return CMap::mergeArray(
             'redirect_uri' => 'https://connect.airregi.jp/oauth/authorize?client_id=ARG&redirect_uri=https%3A%2F%2Fairregi.jp%2FCLP%2Fview%2FcallbackForPlfLogin%2Fauth&response_type=code',
             'user_array'=> array(
               'user1' => array(
-                'username' => 'deruta1992',
-                'password' => 'test-1709',
-              ),
-              'user2' => array(
                 'username' => 'tokotoko42',
                 'password' => 'test-1703',
+              ),
+              'user2' => array(
+                'username' => 'deruta1992',
+                'password' => 'test-1709',
               ),
             ),
             'login_url' => 'https://connect.airregi.jp/login?client_id=ARG&redirect_uri=https%3A%2F%2Fconnect.airregi.jp%2Foauth%2Fauthorize%3Fclient_id%3DARG%26redirect_uri%3Dhttps%253A%252F%252Fairregi.jp%252FCLP%252Fview%252FcallbackForPlfLogin%252Fauth%26response_type%3Dcode',

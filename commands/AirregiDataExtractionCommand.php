@@ -11,7 +11,8 @@ class AirregiDataExtractionCommand extends BatchBase
   private $logout_url;
   private $transaction_url;
   private $user;
-
+  private $tax_rate;
+  
   /**
    * 設定ファイルのパラメータを取得する
    */
@@ -21,8 +22,9 @@ class AirregiDataExtractionCommand extends BatchBase
     $this->login_url = Yii::app()->params['login_url'];
     $this->transaction_url = Yii::app()->params['transaction_url'];
     $this->logout_url = Yii::app()->params['logout_url'];
-    $this->user = Yii::app()->params['user']['username'];
+    $this->user = Yii::app()->params['user_array'];
     $this->log_id = "AIRREGI-INFO";
+    $this->tax_rate = Yii::app()->params['tax_rate'];
   }
   
   /**
@@ -85,15 +87,17 @@ class AirregiDataExtractionCommand extends BatchBase
   /**
    * ログインリクエスト
    * @param type $token
+   * @param type $user
+   * @param type $password
    * @return type
    */
-  private function login($token) {
+  private function login($token, $user, $password) {
      // POSTパラメータを設定
      $params = array(
        "client_id" => Yii::app()->params['client_id'],
        "redirect_uri" => Yii::app()->params['redirect_uri'],
-       "username" => $this->user,
-       "password" => Yii::app()->params['user']['password'],
+       "username" => $user,
+       "password" => $password,
        "_csrf" => $token,
      );
  
@@ -111,7 +115,7 @@ class AirregiDataExtractionCommand extends BatchBase
          CURLOPT_RETURNTRANSFER => true,
      ));
      
-     $msg = 'ログイン処理を行いました。User=' . $this->user;
+     $msg = 'ログイン処理を行いました。User=' . $user;
      $this->setLog($this->log_id, 'info', __CLASS__, __FUNCTION__, __LINE__, $msg);
      return $this->exec();
   }
@@ -144,9 +148,10 @@ class AirregiDataExtractionCommand extends BatchBase
 
   /**
    * 取引データ取得APIのリクエスト要求を行う
+   * @param type $user
    * @return type
    */
-  private function dataRequest() {
+  private function dataRequest($user) {
       // Headerを定義
       $http_header = array(
          'Connection:keep-alive',
@@ -170,7 +175,7 @@ class AirregiDataExtractionCommand extends BatchBase
       ));
  
       $response = $this->exec();
-      $msg = '取引データを取得しました。Response=' . $response;
+      $msg = '取引データを取得しました。User=' . $user . ' Response=' . $response;
       $this->setLog($this->log_id, 'info', __CLASS__, __FUNCTION__, __LINE__, $msg);
       return $response;
   }
@@ -178,17 +183,31 @@ class AirregiDataExtractionCommand extends BatchBase
   /**
    * 取得した取引データをDBへ挿入する
    * @param type $items
+   * @param type $user
+   * @return bool
    */
-  private function insertData($items) {
+  private function insertData($items, $user) {
       // 取引合計金額用データ
       $total_price = 0;
       
+      // tempo_masterのIDを抽出
+      $c = new CDbCriteria;
+      $c->compare('user_id', $user);
+      $tempo_master = TempoMaster::model()->findAll($c);
+      
+      // tempo_masterチェック
+      if (empty($tempo_master[0]->id)) {
+          $msg = '対象の店舗が存在しません。tempo_masterテーブルを確認してください。 user_id=' . $user;
+          $this->setLog($this->log_id, 'error', __CLASS__, __FUNCTION__, __LINE__, $msg);
+          return false;
+      }
+          
       // 各取引情報を解析する
       // receipt_master テーブルの挿入
       foreach ($items as $item) {
           $shohin_name = $item["menuName"];
-          $shohin_category = $item["categoryName"];
-          $tax = $item["saleMoneyAmountRatio"];
+          $shohin_category_text = $item["categoryName"];
+          $tax_rate = $this->tax_rate;
           $price = $item["saleMoneyAmount"];
           $total_price += $price;
 
@@ -197,9 +216,13 @@ class AirregiDataExtractionCommand extends BatchBase
 
               $receipt_master = new ReceiptMaster();
               $receipt_master->buydate = date("Y-m-d", strtotime("-1 day"));
+              $receipt_master->shoten_id = $tempo_master[0]->id;
               $receipt_master->shohin_name = $shohin_name;
-              $receipt_master->shohin_category = $shohin_category;
-              $receipt_master->tax = 8;
+              $receipt_master->shohin_category = 1;
+              $receipt_master->shohin_category_text = $shohin_category_text;
+              $receipt_master->tax = 0;
+              $receipt_master->tax_rate = $tax_rate;
+              $receipt_master->receipt_hokko = 0;
               $receipt_master->price = $price;
 
               $receipt_master->save();
@@ -212,13 +235,9 @@ class AirregiDataExtractionCommand extends BatchBase
               $msg = 'データベースエラーが発生しました。: '. $e->getMessage();
               $this->setLog($this->log_id, 'error', __CLASS__, __FUNCTION__, __LINE__, $msg);
               $transaction->rollback();
+              return false;
           }
       }
-        
-      // tempo_masterのIDを抽出
-      $c = new CDbCriteria;
-      $c->compare('user_id', $this->user);
-      $tempo_master = TempoMaster::model()->findAll($c);
         
       // receipt_dbテーブルの挿入
       try {
@@ -238,40 +257,48 @@ class AirregiDataExtractionCommand extends BatchBase
           $msg = 'データベースエラーが発生しました。: '. $e->getMessage();
           $this->setLog($this->log_id, 'error', __CLASS__, __FUNCTION__, __LINE__, $msg);
           $transaction->rollback();
+          return false;
       }
+      return true;
   }
 
   /**
    * 取得したJsonデータをパースし、
    * データをDBへ挿入する
    * @param type $json
+   * @param type $user
    */
-  private function insertTransactionData($json) {
+  private function insertTransactionData($json, $user) {
     // リスポンスデータをJSONに変換する
     $json = mb_convert_encoding($json, 'UTF8', 'ASCII,JIS,UTF-8,EUC-JP,SJIS-WIN');
     $json_array = json_decode($json,true);
 
     if ($json_array === NULL) {
-        $msg = 'リクエストのJSONコードを取得できませんでした。';
+        $msg = 'リクエストのJSONコードを取得できませんでした。 User=' . $user;
         $this->setLog($this->log_id, 'error', __CLASS__, __FUNCTION__, __LINE__, $msg);
     }
 
-    // 取引データが無ければ、ログを出力して終了    
-    if (empty($json_array["results"]["resultsData"])) {
-        $msg = '取引データが見つかりませんでした。 User = ' . $this->user;
-        $this->setLog($this->log_id, 'info', __CLASS__, __FUNCTION__, __LINE__, $msg);
-
-    // 取引データがあれば、DBへ挿入
+    // 取引データがあれば、DBへインサート
+    if ($json_array["results"]["returnCode"] === "0000") {
+        if (empty($json_array["results"]["resultsData"]["statsSalesList"])) {
+            $msg = '取引データが見つかりませんでした。 User=' . $user;
+            $this->setLog($this->log_id, 'info', __CLASS__, __FUNCTION__, __LINE__, $msg);
+        } else {
+            $this->insertData($json_array["results"]["resultsData"]["statsSalesList"], $user);
+        }
     } else {
-        $this->insertData($json_array["results"]["resultsData"]["statsSalesList"]);
+        $error_message = $json_array["results"]["errMsg"];
+        $msg = 'ログイン処理でエラーが発生しました。 User=' . $user . ' errMsg=' . $error_message;
+        $this->setLog($this->log_id, 'error', __CLASS__, __FUNCTION__, __LINE__, $msg);
     }
   }
 
   /**
    * ログアウトリクエスト
+   * @param type $user
    * @return type
    */
-  private function logout() {
+  private function logout($user) {
     // Headerを定義
     $http_header = array(
        'Connection:keep-alive',
@@ -289,7 +316,7 @@ class AirregiDataExtractionCommand extends BatchBase
          CURLOPT_RETURNTRANSFER => true,
     ));
 
-    $msg = 'ログアウト処理を行いました';
+    $msg = 'ログアウト処理を行いました。 User=' . $user;
     $this->setLog($this->log_id, 'info', __CLASS__, __FUNCTION__, __LINE__, $msg);
     return $this->exec();
   }
@@ -307,43 +334,49 @@ class AirregiDataExtractionCommand extends BatchBase
     $msg = 'ARIレジのデータ出力バッチを開始します';
     $this->setLog($this->log_id, 'info', __CLASS__, __FUNCTION__, __LINE__, $msg);
 
-    // CSRFトークンを取得
-    $token = $this->getCsrfToken();
- 
-    // CSRFトークンが見つからなければ、エラーログを出力し、終了する
-    if (!$token) {
-      $msg = 'CSRFトークンが見つかりません。AIRレジのログインページを確認してください';
-      $this->setLog($this->log_id, 'error', __CLASS__, __FUNCTION__, __LINE__, $msg);
-    }
-    
-    // AIRレジへログイン
-    if (!$this->login($token)) {
-      $msg = 'ログインリクエストに失敗しました';
-      $this->setLog($this->log_id, 'error', __CLASS__, __FUNCTION__, __LINE__, $msg);
-    }
-    
-    // 取引データを抽出
-    $json = $this->dataRequest();
+    // ユーザーを取得し、データ抽出を行う
+    foreach ($this->user as $key => $user_info) {
+        $user = $user_info['username'];
+        $password = $user_info['password'];
 
-    // データ取得に失敗した場合、ログアウトし終了
-    if ($json === "") {
-        $msg = 'Jsonの取得に失敗しました。ログインに失敗し立ている可能性があります。';
-        $this->setLog($this->log_id, 'error', __CLASS__, __FUNCTION__, __LINE__, $msg);
+        // CSRFトークンを取得
+        $token = $this->getCsrfToken();
+        // CSRFトークンが見つからなければ、エラーログを出力し、終了する
+        if (!$token) {
+            $msg = 'CSRFトークンが見つかりません。AIRレジのログインページを確認してください';
+            $this->setLog($this->log_id, 'error', __CLASS__, __FUNCTION__, __LINE__, $msg);
+        }
 
-    // 取得したデータをDBへ登録する
-    } else {
-        $this->insertTransactionData($json);
+        // AIRレジへログイン
+        if (!$this->login($token, $user, $password)) {
+            $msg = 'ログインリクエストに失敗しました';
+            $this->setLog($this->log_id, 'error', __CLASS__, __FUNCTION__, __LINE__, $msg);
+        }
+    
+        // 取引データを抽出
+        $json = $this->dataRequest($user);
+
+
+        // データ取得に失敗した場合、ログアウトし終了
+        if ($json === "") {
+            $msg = 'Jsonの取得に失敗しました。ログインに失敗し立ている可能性があります。';
+            $this->setLog($this->log_id, 'error', __CLASS__, __FUNCTION__, __LINE__, $msg);
+
+        // 取得したデータをDBへ登録する
+        } else {
+            $this->insertTransactionData($json, $user);
+        }
+
+        // ログアウト処理
+        $this->logout($user);
+    
+        // Cookie削除
+        if (!$this->clearCookies()) {
+            $msg = 'クッキーの削除に失敗しました';
+            $this->setLog($this->log_id, 'error', __CLASS__, __FUNCTION__, __LINE__, $msg);
+        }
     }
-    
-    // ログアウト処理
-    $this->logout();
-    
-    // Cookie削除
-    if (!$this->clearCookies()) {
-      $msg = 'クッキーの削除に失敗しました';
-      $this->setLog($this->log_id, 'error', __CLASS__, __FUNCTION__, __LINE__, $msg);
-    }
-    
+
     // 終了ログを出力
     $msg = 'ARIレジのデータ出力バッチを終了します';
     $this->setLog($this->log_id, 'info', __CLASS__, __FUNCTION__, __LINE__, $msg);
