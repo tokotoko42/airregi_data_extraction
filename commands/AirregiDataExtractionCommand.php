@@ -147,7 +147,7 @@ class AirregiDataExtractionCommand extends BatchBase
                 '%22%2C%22sortType%22%3A%220%22%7D';
       
       // Debug用 (9/8　取引抽出)
-      $params = 'paramStr=%7B%22categoryId%22%3A%22%22%2C%22targetDateYearFrom%22%3A%222016%22%2C%22targetDateMonthFrom%22%3A%2209%22%2C%22targetDateDayFrom%22%3A%2208%22%2C%22targetDateYearTo%22%3A%222016%22%2C%22targetDateMonthTo%22%3A%2209%22%2C%22targetDateDayTo%22%3A%2213%22%2C%22sortType%22%3A%220%22%7D';
+      //$params = 'paramStr=%7B%22categoryId%22%3A%22%22%2C%22targetDateYearFrom%22%3A%222016%22%2C%22targetDateMonthFrom%22%3A%2209%22%2C%22targetDateDayFrom%22%3A%2208%22%2C%22targetDateYearTo%22%3A%222016%22%2C%22targetDateMonthTo%22%3A%2209%22%2C%22targetDateDayTo%22%3A%2213%22%2C%22sortType%22%3A%220%22%7D';
       
       return $params;
   }
@@ -352,7 +352,6 @@ class AirregiDataExtractionCommand extends BatchBase
     $msg = 'ARIレジのデータ出力バッチを開始します';
     $this->setLog($this->log_id, 'info', __CLASS__, __FUNCTION__, __LINE__, $msg);
 
-    $pre_token = "";
     // ユーザーを取得し、データ抽出を行う
     foreach ($this->user as $key => $user_info) {
         $user = $user_info['username'];
@@ -375,7 +374,6 @@ class AirregiDataExtractionCommand extends BatchBase
     
         // 取引データを抽出
         $json = $this->dataRequest($user);
-
 
         // データ取得に失敗した場合、ログアウトし終了
         if ($json === "") {
