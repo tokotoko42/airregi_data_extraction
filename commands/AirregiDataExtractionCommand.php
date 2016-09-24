@@ -18,6 +18,7 @@ class AirregiDataExtractionCommand extends BatchBase
    */
   private function paramInit() {
     $this->cookie_path = Yii::app()->params['cookie_path'];
+      //$this->cookie_path = tempnam(sys_get_temp_dir(),'cookie_');
     $this->user_agent = Yii::app()->params['user_agent'];
     $this->login_url = Yii::app()->params['login_url'];
     $this->transaction_url = Yii::app()->params['transaction_url'];
@@ -38,7 +39,7 @@ class AirregiDataExtractionCommand extends BatchBase
   }
   
   /**
-   * AIRレジの認証用クッキーを削除する
+   * AIRレジの認証用COOKIEを削除する
    */
   private function clearCookies() {
     if (!is_resource($this->ch)) {
@@ -46,7 +47,13 @@ class AirregiDataExtractionCommand extends BatchBase
       $this->setLog($this->log_id, 'error', __CLASS__, __FUNCTION__, __LINE__, $msg);
       return false;
     }
-    unlink($this->cookie_path);
+    // CURLをCLOSEする
+    curl_close($this->ch);
+
+    // COOKIE_FILEを削除    
+    if (file_exists($this->cookie_path)) {
+        unlink($this->cookie_path);
+    }
     $msg = 'Cookieを削除しました';
     $this->setLog($this->log_id, 'info', __CLASS__, __FUNCTION__, __LINE__, $msg);
 
@@ -141,7 +148,7 @@ class AirregiDataExtractionCommand extends BatchBase
                 '%22%2C%22sortType%22%3A%220%22%7D';
       
       // Debug用 (9/8　取引抽出)
-      //$params = 'paramStr=%7B%22categoryId%22%3A%22%22%2C%22targetDateYearFrom%22%3A%222016%22%2C%22targetDateMonthFrom%22%3A%2209%22%2C%22targetDateDayFrom%22%3A%2208%22%2C%22targetDateYearTo%22%3A%222016%22%2C%22targetDateMonthTo%22%3A%2209%22%2C%22targetDateDayTo%22%3A%2213%22%2C%22sortType%22%3A%220%22%7D';
+      $params = 'paramStr=%7B%22categoryId%22%3A%22%22%2C%22targetDateYearFrom%22%3A%222016%22%2C%22targetDateMonthFrom%22%3A%2209%22%2C%22targetDateDayFrom%22%3A%2208%22%2C%22targetDateYearTo%22%3A%222016%22%2C%22targetDateMonthTo%22%3A%2209%22%2C%22targetDateDayTo%22%3A%2213%22%2C%22sortType%22%3A%220%22%7D';
       
       return $params;
   }
@@ -210,6 +217,18 @@ class AirregiDataExtractionCommand extends BatchBase
           $tax_rate = $this->tax_rate;
           $price = $item["saleMoneyAmount"];
           $total_price += $price;
+          
+          //多重起動チェック
+          $c = new CDbCriteria;
+          $c->compare('buydate', date("Y-m-d", strtotime("-1 day")));
+          $c->compare('shohin_name', $shohin_name);
+          $c->compare('price', $price);
+          $receipt_master = ReceiptMaster::model()->findAll($c);
+          if (!empty($receipt_master[0]->id)) {
+              $msg = 'すでにレコードが存在します。多重起動の可能性があります。 user_id=' . $user;
+              $this->setLog($this->log_id, 'error', __CLASS__, __FUNCTION__, __LINE__, $msg);
+              return false;
+          }
 
           try {
               $transaction = Yii::app()->db->beginTransaction();
@@ -229,7 +248,7 @@ class AirregiDataExtractionCommand extends BatchBase
               $transaction->commit();
               
               $msg = 'receip_masterテーブルにレコードを挿入しました';
-              $this->setLog($this->log_id, 'error', __CLASS__, __FUNCTION__, __LINE__, $msg);
+              $this->setLog($this->log_id, 'info', __CLASS__, __FUNCTION__, __LINE__, $msg);
 
           } catch (CDbException $e) {
               $msg = 'データベースエラーが発生しました。: '. $e->getMessage();
@@ -251,7 +270,7 @@ class AirregiDataExtractionCommand extends BatchBase
 
           $transaction->commit();
           $msg = 'receip_dbテーブルにレコードを挿入しました';
-          $this->setLog($this->log_id, 'error', __CLASS__, __FUNCTION__, __LINE__, $msg);
+          $this->setLog($this->log_id, 'info', __CLASS__, __FUNCTION__, __LINE__, $msg);
           
       } catch (CDbException $e) {
           $msg = 'データベースエラーが発生しました。: '. $e->getMessage();
@@ -334,6 +353,7 @@ class AirregiDataExtractionCommand extends BatchBase
     $msg = 'ARIレジのデータ出力バッチを開始します';
     $this->setLog($this->log_id, 'info', __CLASS__, __FUNCTION__, __LINE__, $msg);
 
+    $pre_token = "";
     // ユーザーを取得し、データ抽出を行う
     foreach ($this->user as $key => $user_info) {
         $user = $user_info['username'];
@@ -341,6 +361,7 @@ class AirregiDataExtractionCommand extends BatchBase
 
         // CSRFトークンを取得
         $token = $this->getCsrfToken();
+
         // CSRFトークンが見つからなければ、エラーログを出力し、終了する
         if (!$token) {
             $msg = 'CSRFトークンが見つかりません。AIRレジのログインページを確認してください';
@@ -369,14 +390,14 @@ class AirregiDataExtractionCommand extends BatchBase
 
         // ログアウト処理
         $this->logout($user);
-    
+
         // Cookie削除
         if (!$this->clearCookies()) {
             $msg = 'クッキーの削除に失敗しました';
             $this->setLog($this->log_id, 'error', __CLASS__, __FUNCTION__, __LINE__, $msg);
         }
     }
-
+    
     // 終了ログを出力
     $msg = 'ARIレジのデータ出力バッチを終了します';
     $this->setLog($this->log_id, 'info', __CLASS__, __FUNCTION__, __LINE__, $msg);
