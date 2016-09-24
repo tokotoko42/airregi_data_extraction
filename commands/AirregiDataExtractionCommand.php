@@ -18,7 +18,6 @@ class AirregiDataExtractionCommand extends BatchBase
    */
   private function paramInit() {
     $this->cookie_path = Yii::app()->params['cookie_path'];
-      //$this->cookie_path = tempnam(sys_get_temp_dir(),'cookie_');
     $this->user_agent = Yii::app()->params['user_agent'];
     $this->login_url = Yii::app()->params['login_url'];
     $this->transaction_url = Yii::app()->params['transaction_url'];
