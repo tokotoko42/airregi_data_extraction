@@ -1,5 +1,0 @@
-Insert into tempo_master
-   (tempo_name, zip, address, tel, user_id, email, hp)
-  values
-   ("テスト店舗", "140-0001", "東京都 品川区 北品川 1-1-1", "03-1234-5678", "deruta1992", "test@gmail.com", "http://sample.com"),
-   ("ダミー店舗", "216-0003", "神奈川県 川崎市 宮前区 有馬 1-1-1", "03-8765-5678", "tokotoko42", "sample@gmail.com", "http://test.com");
