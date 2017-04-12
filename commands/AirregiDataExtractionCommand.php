@@ -207,6 +207,40 @@ class AirregiDataExtractionCommand extends BatchBase
           $this->setLog($this->log_id, 'error', __CLASS__, __FUNCTION__, __LINE__, $msg);
           return false;
       }
+
+      // 金額合計算出
+      foreach ($items as $item) {
+          $price = $item["saleMoneyAmount"];
+          $total_price += $price;
+      }
+
+      // receipt_dbテーブルの挿入
+      try {
+          $transaction = Yii::app()->db->beginTransaction();
+
+          $receipt_db = new ReceiptDb();
+          $receipt_db->buydate = date("Y-m-d", strtotime("-1 day"));
+          $receipt_db->shoten_id = $tempo_master[0]->id;
+          $receipt_db->price = $total_price;
+          $receipt_db->save();
+
+          $transaction->commit();
+          $msg = 'receip_dbテーブルにレコードを挿入しました';
+          $this->setLog($this->log_id, 'info', __CLASS__, __FUNCTION__, __LINE__, $msg);
+          
+      } catch (CDbException $e) {
+          $msg = 'データベースエラーが発生しました。: '. $e->getMessage();
+          $this->setLog($this->log_id, 'error', __CLASS__, __FUNCTION__, __LINE__, $msg);
+          $transaction->rollback();
+          return false;
+      }
+
+      // receipt_dbのidを取得
+      $c = new CDbCriteria;
+      $c->compare('shoten_id', $tempo_master[0]->id);
+      $c->compare('price', $total_price);
+      $c->compare('buydate', date("Y-m-d", strtotime("-1 day")));
+      $receipt_db2 = ReceiptDb::model()->findAll($c);
           
       // 各取引情報を解析する
       // receipt_master テーブルの挿入
@@ -215,7 +249,6 @@ class AirregiDataExtractionCommand extends BatchBase
           $shohin_category_text = $item["categoryName"];
           $tax_rate = $this->tax_rate;
           $price = $item["saleMoneyAmount"];
-          $total_price += $price;
           
           //多重起動チェック
           $c = new CDbCriteria;
@@ -235,6 +268,7 @@ class AirregiDataExtractionCommand extends BatchBase
               $receipt_master = new ReceiptMaster();
               $receipt_master->buydate = date("Y-m-d", strtotime("-1 day"));
               $receipt_master->shoten_id = $tempo_master[0]->id;
+              $receipt_master->oya_id = $receipt_db2[0]->id;
               $receipt_master->shohin_name = $shohin_name;
               $receipt_master->shohin_category = 1;
               $receipt_master->shohin_category_text = $shohin_category_text;
@@ -257,26 +291,6 @@ class AirregiDataExtractionCommand extends BatchBase
           }
       }
         
-      // receipt_dbテーブルの挿入
-      try {
-          $transaction = Yii::app()->db->beginTransaction();
-
-          $receipt_db = new ReceiptDb();
-          $receipt_db->buydate = date("Y-m-d", strtotime("-1 day"));
-          $receipt_db->shoten_id = $tempo_master[0]->id;
-          $receipt_db->price = $total_price;
-          $receipt_db->save();
-
-          $transaction->commit();
-          $msg = 'receip_dbテーブルにレコードを挿入しました';
-          $this->setLog($this->log_id, 'info', __CLASS__, __FUNCTION__, __LINE__, $msg);
-          
-      } catch (CDbException $e) {
-          $msg = 'データベースエラーが発生しました。: '. $e->getMessage();
-          $this->setLog($this->log_id, 'error', __CLASS__, __FUNCTION__, __LINE__, $msg);
-          $transaction->rollback();
-          return false;
-      }
       return true;
   }
 

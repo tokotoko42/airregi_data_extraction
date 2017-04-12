@@ -11,6 +11,7 @@ CREATE TABLE `receipt_master` (
   `id` int(11) AUTO_INCREMENT DEFAULT NULL,
   `buydate` datetime DEFAULT NULL,
   `shoten_id` int(11) DEFAULT NULL,
+  `oya_id` int(11) DEFAULT NULL,
   `shohin_name` text DEFAULT NULL,
   `shohin_category` int(11) DEFAULT NULL,
   `shohin_category_text` text DEFAULT NULL,
